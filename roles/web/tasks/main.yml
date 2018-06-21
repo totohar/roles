@@ -1,0 +1,33 @@
+---
+# tasks file for web
+- name: install git
+  yum: name=git state=latest
+
+- name: checkout lameapp 
+  git: repo=https://github.com/jsmartin/lameapp.git version="{{lameapp_version|string}}" dest=/var/www/lameapp
+
+- name: set permission on the app
+  file: name=/var/www/lameapp/lame.py mode=0755
+
+- name: set selinux context on the app
+  command: chcon -t httpd_sys_script_exec_t /var/www/lameapp/lame.py
+
+- name: create directory sites_available
+  file: name={{sites_available}} state=directory
+
+- name: create directory sites enabled
+  file: name={{sites_enabled}} state=directory
+
+- name: add lameapp httpd config file
+  copy: src=lameapp.conf dest={{sites_available}}
+
+- name: link app config
+  file: src="{{sites_available}}/lameapp.conf" dest="{{sites_enabled}}/lameapp.conf" state=link 
+  notify: restart httpd
+
+- name: check for proper response
+  uri: 
+    url: http://localhost/lame
+    return_content: yes
+  register: result
+  until: '"Hello Moon!" in result.content'

@@ -1,0 +1,47 @@
+---
+# tasks file for mariadb
+- name: install mariadb package
+  yum: name={{item}} state=latest
+  with_items: 
+  - mariadb-server
+  - MySQL-python
+
+- name: configure selinux to start mariadb on any port
+  seboolean: name=mysql_connect_any state=true persistent=yes
+
+- name: create mariadb configuration file
+  template: src=my.cnf.j2 dest=/etc/my.cnf
+  notify: restart mariadb
+
+- name: create mariadb log file
+  file: path=/var/log/mysqld.log state=touch owner=mysql group=mysql
+
+- name: set selinux context on the mysqld.log
+  command: chcon -t mysqld_log_t /var/log/mysqld.log
+
+- name: create mariadb PID directory
+  file: path=/var/run/mysqld state=directory owner=mysql group=mysql
+
+- name: start mariadb service
+  service: name=mariadb state=started enabled=yes
+
+- name: insert firewalld rule
+  firewalld: port={{mysql_port}}/tcp permanent=true state=enabled immediate=yes 
+
+- name: copy mariadb root password file
+  template: src=".my.cnf.j2" dest="/root/.my.cnf"
+
+- name: set db root password
+  mysql_user: name=root password={{dbrootpasswordnew}}
+
+- name: delete test database
+  mysql_db: name={{item}} state=absent
+  with_items: 
+  - test
+  - test\_%
+
+- name: create application database
+  mysql_db: name={{dbname}} state=present
+
+- name: create application database user
+  mysql_user: name={{dbuser}} password={{dbpassword}} priv='*.*:ALL'
