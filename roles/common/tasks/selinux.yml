@@ -1,3 +1,4 @@
+---
 - name: install python bindings for selinux
   yum: name={{item}} state=latest
   with_items: 

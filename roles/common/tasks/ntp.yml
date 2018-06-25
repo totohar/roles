@@ -1,3 +1,4 @@
+---
 - name: install ntp
   yum: name=ntp state=latest
 
